@@ -39,6 +39,28 @@ namespace Raw_SQL
             MainConnection.Close();
         }
 
+        public static void AddModelGrandParent(GrandParent grandparent)
+        {
+            foreach (var parent in grandparent.Parents)
+            {
+                try
+                {
+                    AddModelParent(parent);
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+            
+            string parentchildkeys = String.Join(",", grandparent.Parents.Select(a => a.Id).ToArray());
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Insert Into [GrandParentTable] (Id,Text,ParentChildId) values ('" + grandparent.Id + "','" + grandparent.Text + "','" + parentchildkeys + "')";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            SqlCommand.ExecuteNonQuery();
+            MainConnection.Close();
+        }
+
         public static Child GetChildById(Guid Id)
         {
             SqlConnection MainConnection = new SqlConnection(connectionstring);
@@ -85,6 +107,42 @@ namespace Raw_SQL
             MainConnection.Close();
             return parents.FirstOrDefault();
         }
+
+        public static GrandParent GetGrandParentById(Guid Id)
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Select Id,Text,ParentChildId  from [GrandParentTable]" + "Where Id = '" + Id.ToString() + "'";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            var myReader = SqlCommand.ExecuteReader();
+            List<GrandParent> grandparents = new List<GrandParent>();
+            
+            //savepoint
+
+            while (myReader.Read())
+            {
+                var grandparent = new GrandParent();
+                grandparent.Id = new Guid(myReader.GetValue(0).ToString());
+                grandparent.Text = myReader.GetValue(1).ToString();
+                if (grandparent.Parents != null)
+                {
+                    List<string> parentchildids = myReader.GetValue(2).ToString().Split(",").ToList();
+                    try
+                    {
+                        parent.Child = GetChildById(new Guid(myReader.GetValue(2).ToString()));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        break;
+                    }
+                    pa
+                        } rents.Add(parent);
+            }
+            MainConnection.Close();
+            return parents.FirstOrDefault();
+        }
+
 
         public static List<Parent> GetAllParents()
         {
@@ -143,11 +201,31 @@ namespace Raw_SQL
             MainConnection.Close();
         }
 
+        public static void UpdateParent(Parent parent, string textvalue)
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Update [ParentTable] set Text = '" + textvalue + "' where Id = '" + parent.Id + "'";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            SqlCommand.ExecuteNonQuery();
+            MainConnection.Close();
+        }
+
         public static void DeleteChild(Child child)
         {
             SqlConnection MainConnection = new SqlConnection(connectionstring);
             MainConnection.Open();
             string Command = "Delete from [Table] where Id='" + child.Id + "'";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            SqlCommand.ExecuteNonQuery();
+            MainConnection.Close();
+        }
+
+        public static void DeleteParent(Parent parent)
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Delete from [ParentTable] where Id='" + parent.Id + "'";
             SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
             SqlCommand.ExecuteNonQuery();
             MainConnection.Close();
@@ -173,11 +251,16 @@ namespace Raw_SQL
                 },
                 Text = "From GrandParent"
             };
-
-
+            AddModelGrandParent(grandparent1);
             var item = GetParentById(GetAllParents().FirstOrDefault().Id);
-
-            Console.WriteLine($"id : {item.Id}  text : {item.Text} childid : {item.Child.Id}");
+            try
+            {
+                Console.WriteLine($"id : {item.Id}  text : {item.Text} childid : {item.Child.Id}");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"id : {item.Id}  text : {item.Text} childid : empty");
+            }
 
             //foreach (var item in children2)
             //{
