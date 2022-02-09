@@ -117,32 +117,66 @@ namespace Raw_SQL
             var myReader = SqlCommand.ExecuteReader();
             List<GrandParent> grandparents = new List<GrandParent>();
             
-            //savepoint
 
             while (myReader.Read())
             {
                 var grandparent = new GrandParent();
                 grandparent.Id = new Guid(myReader.GetValue(0).ToString());
                 grandparent.Text = myReader.GetValue(1).ToString();
-                if (grandparent.Parents != null)
-                {
-                    List<string> parentchildids = myReader.GetValue(2).ToString().Split(",").ToList();
+
+                List<string> parentchildids = myReader.GetValue(2).ToString().Split(",").ToList();
                     try
                     {
-                        parent.Child = GetChildById(new Guid(myReader.GetValue(2).ToString()));
+                        grandparent.Parents = new List<Parent>();
+                        foreach (var item in parentchildids)
+                        {
+                            grandparent.Parents.Add(GetParentById(new Guid(myReader.GetValue(2).ToString())));
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
                         break;
                     }
-                    pa
-                        } rents.Add(parent);
+                
+                grandparents.Add(grandparent);
             }
             MainConnection.Close();
-            return parents.FirstOrDefault();
+            return grandparents.FirstOrDefault();
         }
 
+        public static List<GrandParent> GetAllGrandParents()
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Select * from [GrandParentTable]";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            var myReader = SqlCommand.ExecuteReader();
+            List<GrandParent> grandparents = new List<GrandParent>();
+            while (myReader.Read())
+            {
+                var grandparent = new GrandParent();
+                grandparent.Id = new Guid(myReader.GetValue(0).ToString());
+                grandparent.Text = myReader.GetValue(1).ToString();
+
+                List<string> parentchildids = myReader.GetValue(2).ToString().Split(",").ToList();
+                try
+                {
+                    grandparent.Parents = new List<Parent>();
+                    foreach (var item in parentchildids)
+                    {
+                        grandparent.Parents.Add(GetParentById(new Guid(myReader.GetValue(2).ToString())));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    break;
+                }
+
+                grandparents.Add(grandparent);
+            }
+            MainConnection.Close();
+            return grandparents;
+        }
 
         public static List<Parent> GetAllParents()
         {
@@ -158,7 +192,7 @@ namespace Raw_SQL
                 parent.Id = new Guid(myReader.GetValue(0).ToString());
                 try
                 {
-                    parent.Child = GetChildById(new Guid(myReader.GetValue(1).ToString()));
+                        parent.Child = GetChildById(new Guid(myReader.GetValue(1).ToString()));
                 }
                 catch (Exception ex)
                 {
@@ -211,6 +245,16 @@ namespace Raw_SQL
             MainConnection.Close();
         }
 
+        public static void UpdateGrandParent(GrandParent parent, string textvalue)
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Update [GrandParentTable] set Text = '" + textvalue + "' where Id = '" + parent.Id + "'";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            SqlCommand.ExecuteNonQuery();
+            MainConnection.Close();
+        }
+
         public static void DeleteChild(Child child)
         {
             SqlConnection MainConnection = new SqlConnection(connectionstring);
@@ -226,6 +270,16 @@ namespace Raw_SQL
             SqlConnection MainConnection = new SqlConnection(connectionstring);
             MainConnection.Open();
             string Command = "Delete from [ParentTable] where Id='" + parent.Id + "'";
+            SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
+            SqlCommand.ExecuteNonQuery();
+            MainConnection.Close();
+        }
+
+        public static void DeleteGrandParent(GrandParent grandparent)
+        {
+            SqlConnection MainConnection = new SqlConnection(connectionstring);
+            MainConnection.Open();
+            string Command = "Delete from [GrandParentTable] where Id='" + grandparent.Id + "'";
             SqlCommand SqlCommand = new SqlCommand(Command, MainConnection);
             SqlCommand.ExecuteNonQuery();
             MainConnection.Close();
@@ -251,21 +305,26 @@ namespace Raw_SQL
                 },
                 Text = "From GrandParent"
             };
-            AddModelGrandParent(grandparent1);
-            var item = GetParentById(GetAllParents().FirstOrDefault().Id);
+            DeleteGrandParent(GetGrandParentById(new Guid("30bba0e1-4dd8-41ac-b2e0-51059de719f1")));
+            var items = GetAllGrandParents();
+            
             try
             {
-                Console.WriteLine($"id : {item.Id}  text : {item.Text} childid : {item.Child.Id}");
+                foreach (var item in items)
+                {
+                    Console.WriteLine($"id : {item.Id}  text : {item.Text}");
+                    foreach (var parentchilditem in item.Parents)
+                    {
+                        Console.WriteLine($"parentchildid: {parentchilditem.Id}");
+                        Console.WriteLine($"childid: {parentchilditem.Child.Id}");
+                    }
+                }
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"id : {item.Id}  text : {item.Text} childid : empty");
+                Console.WriteLine($"empty");
             }
 
-            //foreach (var item in children2)
-            //{
-            //    Console.WriteLine($"id : {item.Id}  text : {item.Text}");
-            //}
         }
     }
 }
